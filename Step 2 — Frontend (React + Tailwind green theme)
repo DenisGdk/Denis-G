@@ -1,0 +1,66 @@
+// frontend/src/App.js
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+
+function App() {
+  const [logs, setLogs] = useState([]);
+  const [name, setName] = useState("");
+  const [department, setDepartment] = useState("");
+  
+  useEffect(() => {
+    fetchLogs();
+  }, []);
+  
+  const fetchLogs = async () => {
+    const res = await axios.get("http://localhost:8000/logs");
+    setLogs(res.data);
+  };
+  
+  const addLog = async () => {
+    await axios.post("http://localhost:8000/logs", { name, department });
+    setName(""); setDepartment("");
+    fetchLogs();
+  };
+  
+  const generateReport = () => {
+    window.open("http://localhost:8000/report", "_blank");
+  };
+  
+  const today = new Date().toLocaleDateString();
+  
+  return (
+    <div className="min-h-screen bg-green-50 p-6">
+      <h1 className="text-3xl font-bold text-green-800 mb-4">The Peninsula London</h1>
+      <p className="mb-4 text-green-700">Today: {today}</p>
+      
+      <div className="mb-4">
+        <input className="border p-2 mr-2" placeholder="Name" value={name} onChange={e=>setName(e.target.value)} />
+        <input className="border p-2 mr-2" placeholder="Department" value={department} onChange={e=>setDepartment(e.target.value)} />
+        <button className="bg-green-700 text-white px-4 py-2" onClick={addLog}>Add Log</button>
+      </div>
+      
+      <table className="min-w-full bg-white shadow-md rounded mb-4">
+        <thead className="bg-green-200">
+          <tr>
+            <th className="py-2 px-4">Time</th>
+            <th className="py-2 px-4">Name & Surname</th>
+            <th className="py-2 px-4">Department / Company</th>
+          </tr>
+        </thead>
+        <tbody>
+          {logs.map((log, index) => (
+            <tr key={index} className="border-t">
+              <td className="py-2 px-4">{log[0].split(" ")[1]}</td>
+              <td className="py-2 px-4">{log[1]}</td>
+              <td className="py-2 px-4">{log[2]}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      
+      <button className="bg-green-800 text-white px-6 py-3" onClick={generateReport}>Generate Report</button>
+    </div>
+  );
+}
+
+export default App;
