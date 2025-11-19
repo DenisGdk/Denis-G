@@ -1,0 +1,101 @@
+# backend/main.py
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from datetime import datetime, timedelta
+from fastapi.responses import FileResponse
+import sqlite3
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+import io
+
+app = FastAPI()
+
+# CORS for frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+DB_FILE = "logs.db"
+
+# Initialize DB
+def init_db():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("""CREATE TABLE IF NOT EXISTS logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp TEXT,
+                name TEXT,
+                department TEXT
+                )""")
+    conn.commit()
+    conn.close()
+
+init_db()
+
+# Add log
+@app.post("/logs")
+def add_log(name: str, department: str):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("INSERT INTO logs (timestamp, name, department) VALUES (?, ?, ?)", 
+              (timestamp, name, department))
+    conn.commit()
+    conn.close()
+    return {"message": "Log added", "timestamp": timestamp}
+
+# Get logs
+@app.get("/logs")
+def get_logs():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT timestamp, name, department FROM logs ORDER BY timestamp DESC")
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+# Generate PDF (last 12 hours)
+@app.get("/report")
+def generate_report():
+    twelve_hours_ago = datetime.now() - timedelta(hours=12)
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT timestamp, name, department FROM logs WHERE timestamp >= ?", 
+              (twelve_hours_ago.strftime("%Y-%m-%d %H:%M:%S"),))
+    logs = c.fetchall()
+    conn.close()
+    
+    buffer = io.BytesIO()
+    pdf = canvas.Canvas(buffer, pagesize=A4)
+    
+    pdf.setFont("Helvetica-Bold", 20)
+    pdf.setFillColorRGB(0, 0.3, 0)  # Peninsula green watermark
+    pdf.drawCentredString(300, 800, "The Peninsula London")
+    
+    pdf.setFont("Helvetica-Bold", 16)
+    pdf.setFillColorRGB(0, 0, 0)
+    pdf.drawString(50, 750, f"Bag Searches Report ({datetime.now().strftime('%Y-%m-%d')})")
+    
+    y = 700
+    pdf.setFont("Helvetica", 12)
+    pdf.drawString(50, y, "Time")
+    pdf.drawString(200, y, "Name & Surname")
+    pdf.drawString(400, y, "Department / Company")
+    y -= 20
+    
+    for log in logs:
+        timestamp, name, department = log
+        pdf.drawString(50, y, timestamp.split(" ")[1])
+        pdf.drawString(200, y, name)
+        pdf.drawString(400, y, department)
+        y -= 20
+        if y < 50:
+            pdf.showPage()
+            y = 750
+    
+    pdf.save()
+    buffer.seek(0)
+    return FileResponse(buffer, media_type='application/pdf', filename="BagSearchReport.pdf")
