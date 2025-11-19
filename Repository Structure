@@ -1,0 +1,25 @@
+bag-search-app/
+│
+├── backend/
+│   ├── main.py              # FastAPI backend entry
+│   ├── database.py          # SQLite database connection
+│   ├── models.py            # Database models
+│   ├── schemas.py           # Pydantic models
+│   ├── crud.py              # Create/read operations
+│   ├── report.py            # PDF generation logic
+│   ├── requirements.txt     # Python dependencies
+│   └── render.yaml          # Render deployment config
+│
+├── frontend/
+│   ├── src/
+│   │    ├── App.js          # Main React app
+│   │    ├── index.js
+│   │    ├── components/
+│   │    │     ├── LogTable.js
+│   │    │     └── AddLogForm.js
+│   │    └── pages/
+│   │          └── HomePage.js
+│   ├── package.json
+│   └── tailwind.config.js   # For Peninsula green styling
+│
+└── README.md
